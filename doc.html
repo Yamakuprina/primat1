@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<title>main.py</title>
+<link href="doc.css" rel="stylesheet">
+</head>
+<body>
+<div class="document">
+
+
+<p>from __future__ import annotations</p>
+<p>import itertools
+import math</p>
+<p>import numpy as np</p>
+<dl class="docutils">
+<dt>class Simplex:</dt>
+<dd><dl class="first docutils">
+<dt>&quot;&quot;&quot;Simplex класс реализует Симплекс-метод.</dt>
+<dd>Решает задачу оптимизации линейного программирования&quot;&quot;&quot;</dd>
+</dl>
+<p>a: np.array
+b: np.array
+c: np.array
+is_max: bool
+print_steps: bool
+tableau: np.array</p>
+<dl class="docutils">
+<dt>def __init__(</dt>
+<dd>self,
+a: np.array,
+b: np.array,
+c: np.array,
+is_max: bool,
+print_steps: bool = False</dd>
+<dt>):</dt>
+<dd>self.a = a
+self.b = b
+self.c = c
+self.ans = 0
+self.is_max = is_max
+self.print_steps = print_steps
+self.to_tableau()
+self.make_basic_columns()
+self.fix_b()</dd>
+<dt>def fix_b(self):</dt>
+<dd><p class="first">&quot;&quot;&quot;Исправляет ситуацию, когда b &lt; 0, если таковая существует&quot;&quot;&quot;
+if any(x &lt; 0 for x in self.b):</p>
+<blockquote class="last">
+row_index = np.argmin(self.b)
+column_index = np.argmin(self.a[row_index])
+self.next_step(row_index, column_index)</blockquote>
+</dd>
+<dt>def make_basic_columns(self):</dt>
+<dd><p class="first">&quot;&quot;&quot;Отвечает за создание столбцов, проходя циклами по ширине и длине&quot;&quot;&quot;</p>
+<p>columns = np.array(self.tableau).T
+rows_idx = list(range(len(columns[0]) - 1))
+col_idx = list(range(len(columns) - 1))
+count = 0
+for i, col in enumerate(columns[:-1]):</p>
+<blockquote>
+<dl class="docutils">
+<dt>if self.is_basic(col):</dt>
+<dd>count = count + 1
+rows_idx.remove(np.argmax(col))
+col_idx.remove(np.argmax(col_idx))</dd>
+</dl>
+</blockquote>
+<dl class="last docutils">
+<dt>for i in range(len(columns[0]) - 1 - count):</dt>
+<dd><p class="first">el_iter = itertools.product(rows_idx, col_idx)
+idx = next(el_iter)
+while self.tableau[idx[0]][idx[1]] == 0:</p>
+<blockquote>
+idx = next(el_iter)</blockquote>
+<p class="last">self.next_step(idx[0], idx[1])
+rows_idx.remove(idx[0])
+col_idx.remove(idx[1])</p>
+</dd>
+</dl>
+</dd>
+<dt>def to_tableau(self):</dt>
+<dd>&quot;&quot;&quot;
+Создает таблицы отсортированные по строкам
+&quot;&quot;&quot;
+xb = np.column_stack((self.a, self.b.T))
+z = np.column_stack(([self.c], [[self.ans]]))
+self.tableau = np.vstack((xb, z))</dd>
+</dl>
+<p>&#64;classmethod
+def read_from_file(cls, path: str) -&gt; cls:</p>
+<blockquote>
+<p>&quot;&quot;&quot;Преобразует данные из тестовых файлов в Simplex класс&quot;&quot;&quot;
+with open(path, &quot;r&quot;) as f:</p>
+<blockquote>
+<p>is_max = False
+if f.readline().strip() == 'max':</p>
+<blockquote>
+is_max = True</blockquote>
+<p>f.readline()
+c = [float(num) for num in f.readline().strip().split(',')]
+f.readline()</p>
+<p>a_matrix = []
+for line in f:</p>
+<blockquote>
+<dl class="docutils">
+<dt>if not line.strip():</dt>
+<dd>break</dd>
+</dl>
+<p>a_matrix.append([float(num) for num in line.strip().split(',')])</p>
+</blockquote>
+<p>b_matrix = [float(num) for num in f.readline().strip().split(',')]
+return cls(np.array(a_matrix), np.array(b_matrix), np.array(c), is_max, print_steps=True)</p>
+</blockquote>
+</blockquote>
+<dl class="docutils">
+<dt>def can_be_improved(self) -&gt; bool:</dt>
+<dd>&quot;&quot;&quot;Проверяет оптимально ли найденное решение или нет&quot;&quot;&quot;
+return any(x &gt; 0 for x in self.c) if self.is_max else any(x &lt; 0 for x in self.c)</dd>
+<dt>def find_solving_column(self) -&gt; int:</dt>
+<dd>&quot;&quot;&quot;Возвращает индекс ведущей колонки&quot;&quot;&quot;
+return np.argmax(self.c) if self.is_max else np.argmin(self.c)</dd>
+<dt>def find_solving_row(self, column_index: int) -&gt; int:</dt>
+<dd><p class="first">&quot;&quot;&quot;Анализирует все строки и возвращает индекс ведущей строки&quot;&quot;&quot;
+restrictions = []
+for row_index in range(self.a.shape[0]):</p>
+<blockquote>
+el = self.a[row_index][column_index]
+restrictions.append(math.inf if el &lt;= 0 else self.b[row_index] / el)</blockquote>
+<p>row_index = restrictions.index(min(restrictions))</p>
+<dl class="docutils">
+<dt>if restrictions[row_index] == math.inf:</dt>
+<dd>raise Exception('No answer could be found. Range of valid values is infinite')</dd>
+</dl>
+<p class="last">return row_index</p>
+</dd>
+<dt>def next_step(self, solving_row_index: int, solving_column_index: int):</dt>
+<dd><p class="first">&quot;&quot;&quot;Выполняет перерасчет значений таблицы после изменения базиса&quot;&quot;&quot;
+self.b[solving_row_index] /= self.a[solving_row_index][solving_column_index]
+self.a[solving_row_index] /= self.a[solving_row_index][solving_column_index]</p>
+<dl class="docutils">
+<dt>for row_index in range(self.a.shape[0]):</dt>
+<dd><dl class="first docutils">
+<dt>if row_index == solving_row_index:</dt>
+<dd>continue</dd>
+</dl>
+<p class="last">self.b[row_index] -= self.b[solving_row_index] * self.a[row_index][solving_column_index]
+self.a[row_index] -= self.a[solving_row_index] * self.a[row_index][solving_column_index]</p>
+</dd>
+</dl>
+<p>self.ans -= self.b[solving_row_index] * self.c[solving_column_index]
+self.c -= self.a[solving_row_index] * self.c[solving_column_index]</p>
+<p class="last">self.to_tableau()</p>
+</dd>
+<dt>def solve(self) -&gt; float:</dt>
+<dd><p class="first">&quot;&quot;&quot; Основной метод, который отдает, генерирующий решение&quot;&quot;&quot;
+if self.print_steps:</p>
+<blockquote>
+print(self.tableau)</blockquote>
+<dl class="docutils">
+<dt>while self.can_be_improved():</dt>
+<dd><p class="first">solving_column_index = self.find_solving_column()
+solving_row_index = self.find_solving_row(solving_column_index)
+self.next_step(solving_row_index, solving_column_index)</p>
+<dl class="last docutils">
+<dt>if self.print_steps:</dt>
+<dd>print(self.tableau)</dd>
+</dl>
+</dd>
+</dl>
+<p class="last">return -self.ans</p>
+</dd>
+</dl>
+<p>&#64;staticmethod
+def is_basic(column: np.array) -&gt; bool:</p>
+<blockquote>
+return sum(column) == 1 and column.tolist().count(0) == len(column) - 1</blockquote>
+<dl class="last docutils">
+<dt>def get_solution(self):</dt>
+<dd><p class="first">&quot;&quot;&quot; Основной метод, который отдает готовое решение&quot;&quot;&quot;
+columns = self.tableau.T</p>
+<p>solutions = []</p>
+<dl class="docutils">
+<dt>for column in columns[:-1]:</dt>
+<dd><p class="first">solution = 0
+if self.is_basic(column):</p>
+<blockquote>
+one_index = column.tolist().index(1)
+solution = columns[-1][one_index]</blockquote>
+<p class="last">solutions.append(solution)</p>
+</dd>
+</dl>
+<p class="last">return solutions</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>if __name__ == '__main__':</p>
+<blockquote>
+<dl class="docutils">
+<dt>for task_num in range(1, 7):</dt>
+<dd>simplex = Simplex.read_from_file(f'./input_files/task {task_num}.txt')
+print(simplex.solve())
+print(simplex.get_solution())</dd>
+</dl>
+</blockquote>
+</div>
+</body>
+</html>
